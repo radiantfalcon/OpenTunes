@@ -16,10 +16,16 @@ Open-Source Music downloader for Spotify, YouTube, and YouTube Music. Downloads 
 
 ### Setup & Installation
 
-#### Linux / macOS
+#### Direct Pip Install (One Command)
 ```bash
-git clone https://github.com/your-username/opentunes.git
-cd opentunes
+pip install git+https://github.com/radiantfalcon/OpenTunes.git
+opentunes
+```
+
+#### Clone & Run Locally
+```bash
+git clone https://github.com/radiantfalcon/OpenTunes.git
+cd OpenTunes
 ./setup.sh
 ./run.sh
 ```

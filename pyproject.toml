@@ -9,7 +9,7 @@ description = "Lightweight, cross-platform music downloader for YouTube Music & 
 readme = "README.md"
 requires-python = ">=3.8"
 license = { text = "MIT" }
-authors = [{ name = "OpenTunes Contributors" }]
+authors = [{ name = "radiantfalcon" }]
 keywords = ["music", "downloader", "spotify", "youtube", "ytmusic", "termux", "tui", "offline-player"]
 classifiers = [
     "Programming Language :: Python :: 3",
@@ -20,12 +20,14 @@ classifiers = [
 ]
 dependencies = [
     "yt-dlp>=2024.8.0",
+    "textual>=0.50.0",
     "rich>=13.7.0",
     "mutagen>=1.47.0",
     "requests>=2.31.0",
     "thefuzz>=0.22.0",
     "rapidfuzz>=3.0.0",
     "spotipy>=2.24.0",
+    "static-ffmpeg>=2.5",
 ]
 
 [project.scripts]

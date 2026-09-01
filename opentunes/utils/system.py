@@ -20,35 +20,26 @@ def get_platform_name() -> str:
         return "Linux"
     return platform.system()
 
-def ensure_ffmpeg() -> str | None:
-    path = shutil.which("ffmpeg")
-    if path:
-        return path
-    try:
-        import imageio_ffmpeg
-        exe = imageio_ffmpeg.get_ffmpeg_exe()
-        if exe and os.path.exists(exe):
-            exe_dir = str(Path(exe).parent)
-            if exe_dir not in os.environ.get("PATH", ""):
-                os.environ["PATH"] = f"{exe_dir}{os.pathsep}{os.environ.get('PATH', '')}"
-            return exe
-    except Exception:
-        pass
+def is_ffmpeg_available() -> bool:
+    if shutil.which("ffmpeg") is not None:
+        return True
     try:
         import static_ffmpeg
         static_ffmpeg.add_paths()
-        path = shutil.which("ffmpeg")
-        if path:
-            return path
+        return shutil.which("ffmpeg") is not None
     except Exception:
-        pass
-    return None
-
-def is_ffmpeg_available() -> bool:
-    return ensure_ffmpeg() is not None
+        return False
 
 def get_ffmpeg_path() -> str | None:
-    return ensure_ffmpeg()
+    p = shutil.which("ffmpeg")
+    if p:
+        return p
+    try:
+        import static_ffmpeg
+        static_ffmpeg.add_paths()
+        return shutil.which("ffmpeg")
+    except Exception:
+        return None
 
 def get_ffmpeg_install_instructions() -> str:
     if is_termux():

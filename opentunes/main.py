@@ -125,6 +125,12 @@ def parse_args():
     return parser.parse_args()
 
 def main():
+    try:
+        import static_ffmpeg
+        static_ffmpeg.add_paths()
+    except Exception:
+        pass
+
     args = parse_args()
 
     if args.diagnostics:

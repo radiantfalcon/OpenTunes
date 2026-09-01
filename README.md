@@ -14,18 +14,22 @@ Open-Source Music downloader for Spotify, YouTube, and YouTube Music. Downloads 
 
 ---
 
-### Setup & Installation
+### Installation
 
-#### 1-Command Pip Install (Recommended)
+#### Direct via Pip (Recommended)
 ```bash
 pip install git+https://github.com/radiantfalcon/OpenTunes.git
 ```
-Then run from anywhere:
+Once installed, run OpenTunes from anywhere:
 ```bash
 opentunes
 ```
 
-#### Clone & Run Locally
+---
+
+### Manual Setup
+
+#### Linux / macOS
 ```bash
 git clone https://github.com/radiantfalcon/OpenTunes.git
 cd OpenTunes
@@ -36,8 +40,8 @@ cd OpenTunes
 #### Android (Termux)
 ```bash
 pkg update && pkg install -y python ffmpeg git
-git clone https://github.com/your-username/opentunes.git
-cd opentunes
+git clone https://github.com/radiantfalcon/OpenTunes.git
+cd OpenTunes
 ./setup.sh
 termux-setup-storage
 ./run.sh --mobile
@@ -45,12 +49,11 @@ termux-setup-storage
 
 #### Windows
 ```cmd
-git clone https://github.com/your-username/opentunes.git
-cd opentunes
+git clone https://github.com/radiantfalcon/OpenTunes.git
+cd OpenTunes
 setup.bat
 opentunes.bat
 ```
-*(Requires FFmpeg in PATH)*
 
 ---
 

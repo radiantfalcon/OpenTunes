@@ -24,6 +24,7 @@ from mutagen.mp4 import MP4, MP4Cover
 from mutagen.oggopus import OggOpus
 
 from opentunes.core.models import TrackMetadata
+from opentunes.utils.system import get_ffmpeg_path
 
 class AudioTagger:
 
@@ -78,9 +79,10 @@ class AudioTagger:
                 f_in_path = f_in.name
 
             f_out_path = f_in_path + ".jpg"
+            ff_exe = get_ffmpeg_path() or "ffmpeg"
             subprocess.run(
                 [
-                    "ffmpeg", "-y", "-i", f_in_path,
+                    ff_exe, "-y", "-i", f_in_path,
                     "-vf", "scale='min(1000,iw)':-2",
                     "-q:v", "2",
                     "-pix_fmt", "yuvj420p",

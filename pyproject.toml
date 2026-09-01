@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "opentunes"
+version = "1.0.0"
+description = "Lightweight, cross-platform music downloader for YouTube Music & Spotify with sequential tagging & interactive TUI"
+readme = "README.md"
+requires-python = ">=3.8"
+license = { text = "MIT" }
+authors = [{ name = "OpenTunes Contributors" }]
+keywords = ["music", "downloader", "spotify", "youtube", "ytmusic", "termux", "tui", "offline-player"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Environment :: Console",
+    "Topic :: Multimedia :: Sound/Audio",
+]
+dependencies = [
+    "yt-dlp>=2024.8.0",
+    "rich>=13.7.0",
+    "mutagen>=1.47.0",
+    "requests>=2.31.0",
+    "thefuzz>=0.22.0",
+    "rapidfuzz>=3.0.0",
+    "spotipy>=2.24.0",
+]
+
+[project.scripts]
+opentunes = "opentunes.main:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["opentunes*"]

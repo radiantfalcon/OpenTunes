@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+VENV_PYTHON="$SCRIPT_DIR/.venv/bin/python"
+
+if [ -f "$VENV_PYTHON" ]; then
+    PYTHON_EXEC="$VENV_PYTHON"
+elif command -v python3 >/dev/null 2>&1; then
+    PYTHON_EXEC="python3"
+elif command -v python >/dev/null 2>&1; then
+    PYTHON_EXEC="python"
+else
+    echo "Error: Python 3 is not installed."
+    exit 1
+fi
+
+export PYTHONPATH="$SCRIPT_DIR:$PYTHONPATH"
+exec "$PYTHON_EXEC" -m opentunes.main "$@"

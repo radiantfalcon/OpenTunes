@@ -20,12 +20,6 @@ Open-Source Music downloader for Spotify, YouTube, and YouTube Music. Downloads 
 ```bash
 pip install git+https://github.com/radiantfalcon/OpenTunes.git
 ```
-*(On modern Linux distros like Arch, Debian, or Ubuntu with externally managed Python, add `--break-system-packages` or use `pipx`)*:
-```bash
-pip install --break-system-packages git+https://github.com/radiantfalcon/OpenTunes.git
-# or
-pipx install git+https://github.com/radiantfalcon/OpenTunes.git
-```
 Once installed, run OpenTunes from anywhere:
 ```bash
 opentunes

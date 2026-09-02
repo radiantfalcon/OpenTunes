@@ -21,10 +21,25 @@ def get_platform_name() -> str:
     return platform.system()
 
 def is_ffmpeg_available() -> bool:
-    return shutil.which("ffmpeg") is not None
+    if shutil.which("ffmpeg") is not None:
+        return True
+    try:
+        import static_ffmpeg
+        static_ffmpeg.add_paths()
+        return shutil.which("ffmpeg") is not None
+    except Exception:
+        return False
 
 def get_ffmpeg_path() -> str | None:
-    return shutil.which("ffmpeg")
+    p = shutil.which("ffmpeg")
+    if p:
+        return p
+    try:
+        import static_ffmpeg
+        static_ffmpeg.add_paths()
+        return shutil.which("ffmpeg")
+    except Exception:
+        return None
 
 def get_ffmpeg_install_instructions() -> str:
     if is_termux():

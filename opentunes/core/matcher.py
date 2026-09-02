@@ -1,6 +1,9 @@
 import re
 from typing import Dict, List, Optional, Set, Tuple
-from rapidfuzz import fuzz
+try:
+    from rapidfuzz import fuzz
+except ImportError:
+    from thefuzz import fuzz
 import yt_dlp
 
 from opentunes.core.models import TrackMetadata

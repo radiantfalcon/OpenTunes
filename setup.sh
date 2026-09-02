@@ -18,6 +18,6 @@ echo "• Installing OpenTunes dependencies..."
 "$SCRIPT_DIR/.venv/bin/pip" install --upgrade pip
 "$SCRIPT_DIR/.venv/bin/pip" install -r "$SCRIPT_DIR/requirements.txt"
 
-chmod +x "$SCRIPT_DIR/opentunes" "$SCRIPT_DIR/opentunes_cli"
+chmod +x "$SCRIPT_DIR/run.sh" "$SCRIPT_DIR/opentunes_cli"
 echo "✅ OpenTunes setup complete!"
-echo "Run './opentunes' or './opentunes --help' to start."
+echo "Run './run.sh' or './run.sh --help' to start."

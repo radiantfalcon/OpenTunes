@@ -3,7 +3,17 @@ from typing import Dict, List, Optional, Set, Tuple
 try:
     from rapidfuzz import fuzz
 except ImportError:
-    from thefuzz import fuzz
+    try:
+        from thefuzz import fuzz
+    except ImportError:
+        import difflib
+        class _FuzzFallback:
+            @staticmethod
+            def ratio(s1, s2):
+                return int(difflib.SequenceMatcher(None, s1, s2).ratio() * 100)
+            token_set_ratio = ratio
+            partial_ratio = ratio
+        fuzz = _FuzzFallback()
 import yt_dlp
 
 from opentunes.core.models import TrackMetadata

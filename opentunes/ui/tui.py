@@ -849,8 +849,10 @@ class OpenTunesApp(App):
         t_prog = self.query_one("#track-progress", ProgressBar)
 
         status_str = prog.status.value.upper()
-        title_lbl.update(f"TRACK [{prog.current_track_idx}/{prog.total_tracks}]")
-        info_lbl.update(f"{prog.track_title}")
+        if prog.current_track_idx > 0 and prog.total_tracks > 0:
+            title_lbl.update(f"TRACK [{prog.current_track_idx}/{prog.total_tracks}]")
+        if prog.track_title:
+            info_lbl.update(f"{prog.track_title}")
 
         speed_part = f" | {prog.speed_str}" if prog.speed_str else ""
         eta_part = f" | ETA: {prog.eta_str}" if prog.eta_str else ""
@@ -860,8 +862,9 @@ class OpenTunesApp(App):
 
     def _update_batch_progress(self, current: int, total: int) -> None:
         b_prog = self.query_one("#batch-progress", ProgressBar)
-        pct = (current / total * 100.0) if total > 0 else 100.0
-        b_prog.update(progress=pct)
+        if total > 0:
+            pct = current / total * 100.0
+            b_prog.update(progress=pct)
 
     def _on_download_complete(self, success: int, total: int, out_dir: Path) -> None:
         title_lbl = self.query_one("#monitor-title", Label)

@@ -103,10 +103,14 @@ class SpotifyExtractor:
         if not match:
             return cls._fetch_via_oembed(entity_type, entity_id, original_url)
 
+        token = ""
         try:
             data = json.loads(match.group(1))
-            state = data.get("props", {}).get("pageProps", {}).get("state", {}).get("data", {})
+            page_props = data.get("props", {}).get("pageProps", {})
+            state = page_props.get("state", {}).get("data", {})
             entity = state.get("entity", {})
+            session = page_props.get("state", {}).get("settings", {}).get("session", {})
+            token = session.get("accessToken", "")
         except Exception:
             return cls._fetch_via_oembed(entity_type, entity_id, original_url)
 
@@ -116,7 +120,7 @@ class SpotifyExtractor:
         if entity_type == "track":
             return cls._parse_embed_track(entity, original_url)
         elif entity_type == "playlist":
-            return cls._parse_embed_playlist(entity, original_url)
+            return cls._parse_embed_playlist(entity, original_url, token=token, entity_id=entity_id)
         elif entity_type == "album":
             return cls._parse_embed_album(entity, original_url)
         elif entity_type == "artist":
@@ -167,16 +171,84 @@ class SpotifyExtractor:
         )
 
     @classmethod
-    def _parse_embed_playlist(cls, entity: dict, original_url: str) -> PlaylistInfo:
+    def _fetch_playlist_pathfinder(cls, entity_id: str, token: str, offset: int = 100) -> List[dict]:
+        url = "https://api-partner.spotify.com/pathfinder/v1/query"
+        sha256 = "a65e12194ed5fc443a1cdebed5fabe33ca5b07b987185d63c72483867ad13cb4"
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "app-platform": "WebPlayer",
+            "User-Agent": cls.USER_AGENT,
+        }
+        collected = []
+        curr_offset = offset
+        while True:
+            variables = {
+                "uri": f"spotify:playlist:{entity_id}",
+                "offset": curr_offset,
+                "limit": 100,
+                "enableWatchFeedEntrypoint": False,
+            }
+            params = {
+                "operationName": "fetchPlaylist",
+                "variables": json.dumps(variables, separators=(",", ":")),
+                "extensions": json.dumps({"persistedQuery": {"version": 1, "sha256Hash": sha256}}, separators=(",", ":")),
+            }
+            try:
+                resp = requests.get(url, params=params, headers=headers, timeout=12)
+                if resp.status_code != 200:
+                    break
+                content = resp.json().get("data", {}).get("playlistV2", {}).get("content", {})
+                items = content.get("items", [])
+                total_count = content.get("totalCount", 0)
+                if not items:
+                    break
+                for it in items:
+                    t_data = it.get("itemV2", {}).get("data", {})
+                    if t_data.get("__typename") == "Track":
+                        title = t_data.get("name")
+                        if not title:
+                            continue
+                        artists = [
+                            a.get("profile", {}).get("name")
+                            for a in t_data.get("artists", {}).get("items", [])
+                            if a.get("profile", {}).get("name")
+                        ]
+                        dur_ms = t_data.get("trackDuration", {}).get("totalMilliseconds", 0)
+                        uri = t_data.get("uri", "")
+                        tid = uri.split(":")[-1] if uri else ""
+                        sources = t_data.get("albumOfTrack", {}).get("coverArt", {}).get("sources", [])
+                        cover = sources[0].get("url") if sources else ""
+                        album_name = t_data.get("albumOfTrack", {}).get("name", "")
+                        collected.append({
+                            "title": title,
+                            "subtitle": ", ".join(artists) if artists else "",
+                            "duration": dur_ms,
+                            "id": tid,
+                            "uid": tid,
+                            "cover": cover,
+                            "album": album_name,
+                        })
+                curr_offset += len(items)
+                if total_count and curr_offset >= total_count:
+                    break
+            except Exception:
+                break
+        return collected
+
+    @classmethod
+    def _parse_embed_playlist(cls, entity: dict, original_url: str, token: str = "", entity_id: str = "") -> PlaylistInfo:
         playlist_title = entity.get("name") or entity.get("title") or "Spotify Playlist"
         author = entity.get("subtitle") or entity.get("owner", {}).get("name") or "Spotify"
         description = entity.get("description") or ""
 
         cover_url = cls.extract_cover_art(entity)
 
-        raw_tracks = entity.get("trackList", [])
-        tracks: List[TrackMetadata] = []
+        raw_tracks = list(entity.get("trackList", []))
+        if token and entity_id and len(raw_tracks) >= 100:
+            extra_tracks = cls._fetch_playlist_pathfinder(entity_id, token, offset=len(raw_tracks))
+            raw_tracks.extend(extra_tracks)
 
+        tracks: List[TrackMetadata] = []
         total = len(raw_tracks)
         for idx, item in enumerate(raw_tracks, 1):
             title = item.get("title") or item.get("name") or f"Track {idx}"
@@ -185,15 +257,17 @@ class SpotifyExtractor:
             duration_ms = item.get("duration", 0) or 0
             duration_sec = duration_ms / 1000.0 if duration_ms else 0.0
 
-            track_cover = cls.extract_cover_art(item) or cover_url
+            track_cover = item.get("cover") or cls.extract_cover_art(item) or cover_url
             track_id = item.get("uid") or item.get("id") or (item.get("uri", "").split(":")[-1] if item.get("uri") else "")
             track_url = f"https://open.spotify.com/track/{track_id}" if track_id else original_url
+
+            album_name = item.get("album") or playlist_title
 
             tracks.append(
                 TrackMetadata(
                     title=title,
                     artists=artists,
-                    album=playlist_title,
+                    album=album_name,
                     album_artist=artists[0] if artists else "Various Artists",
                     duration_seconds=duration_sec,
                     track_number=idx,

@@ -148,6 +148,14 @@ class DownloadPipeline:
                 )
             )
 
+        def wrapped_callback(p: DownloadProgress):
+            if p.current_track_idx == 0:
+                p.current_track_idx = index
+            if p.total_tracks == 0:
+                p.total_tracks = total_tracks
+            if progress_callback:
+                progress_callback(p)
+
         candidates = AudioMatcher.get_ranked_candidates(track)
         if not candidates:
             raise RuntimeError(f"No audio candidates found on YouTube for '{track.artist_str} - {track.title}'")
@@ -161,7 +169,9 @@ class DownloadPipeline:
                     dest_path,
                     options,
                     stream_url=candidate_url,
-                    progress_callback=progress_callback,
+                    progress_callback=wrapped_callback,
+                    track_index=index,
+                    total_tracks=total_tracks,
                 )
                 if dest_path.exists() and dest_path.stat().st_size >= 100_000:
                     track.youtube_url = candidate_url

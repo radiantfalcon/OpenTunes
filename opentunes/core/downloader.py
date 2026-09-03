@@ -25,6 +25,8 @@ class AudioDownloader:
         options: DownloadOptions,
         stream_url: Optional[str] = None,
         progress_callback: Optional[Callable[[DownloadProgress], None]] = None,
+        track_index: int = 1,
+        total_tracks: int = 1,
     ) -> Path:
         url_to_download = stream_url or track.youtube_url
         if not url_to_download:
@@ -33,6 +35,8 @@ class AudioDownloader:
         if dest_path.exists() and not options.overwrite and dest_path.stat().st_size > 100_000:
             if progress_callback:
                 prog = DownloadProgress(
+                    current_track_idx=track_index,
+                    total_tracks=total_tracks,
                     track_title=track.title,
                     status=TrackStatus.SKIPPED,
                     download_percent=100.0,
@@ -70,6 +74,8 @@ class AudioDownloader:
                 eta_str = f"{int(eta)}s" if eta else ""
 
                 prog = DownloadProgress(
+                    current_track_idx=track_index,
+                    total_tracks=total_tracks,
                     track_title=track.title,
                     status=TrackStatus.DOWNLOADING,
                     download_percent=percent,
@@ -79,6 +85,8 @@ class AudioDownloader:
                 progress_callback(prog)
             elif status == "finished":
                 prog = DownloadProgress(
+                    current_track_idx=track_index,
+                    total_tracks=total_tracks,
                     track_title=track.title,
                     status=TrackStatus.CONVERTING,
                     download_percent=100.0,

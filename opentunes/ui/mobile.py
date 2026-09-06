@@ -101,10 +101,11 @@ class MobileTUI:
         cfg = load_config()
         fmt = cfg.get("format", "mp3").upper()
         bitrate = cfg.get("bitrate", "320k")
+        concurrent = cfg.get("concurrent_downloads", 3)
         out_dir = cfg.get("output_dir", str(get_default_music_dir()))
 
         self.console.print("[bold white]OPENTUNES[/bold white]")
-        self.console.print(f"[dim]{fmt} {bitrate} | {out_dir}[/dim]\n")
+        self.console.print(f"[dim]{fmt} {bitrate} | {concurrent} concurrent | {out_dir}[/dim]\n")
         self.console.print("[bold white]1.[/bold white] Download URL or Search")
         self.console.print("[bold white]2.[/bold white] Batch Download (.txt)")
         self.console.print("[bold white]3.[/bold white] Settings")
@@ -118,12 +119,13 @@ class MobileTUI:
             self.console.print("[bold white]SETTINGS[/bold white]\n")
             self.console.print(f"1. Format: [bold white]{cfg.get('format', 'mp3').upper()}[/bold white]")
             self.console.print(f"2. Bitrate: [bold white]{cfg.get('bitrate', '320k')}[/bold white]")
-            self.console.print(f"3. Output Directory: [bold white]{cfg.get('output_dir', str(get_default_music_dir()))}[/bold white]")
-            self.console.print(f"4. Lyrics: [bold white]{'ON' if cfg.get('fetch_lyrics', True) else 'OFF'}[/bold white]")
-            self.console.print(f"5. Synced .LRC: [bold white]{'ON' if cfg.get('save_lrc', False) else 'OFF'}[/bold white]")
-            self.console.print("6. Back")
+            self.console.print(f"3. Concurrent Downloads: [bold white]{cfg.get('concurrent_downloads', 3)} songs[/bold white]")
+            self.console.print(f"4. Output Directory: [bold white]{cfg.get('output_dir', str(get_default_music_dir()))}[/bold white]")
+            self.console.print(f"5. Lyrics: [bold white]{'ON' if cfg.get('fetch_lyrics', True) else 'OFF'}[/bold white]")
+            self.console.print(f"6. Synced .LRC: [bold white]{'ON' if cfg.get('save_lrc', False) else 'OFF'}[/bold white]")
+            self.console.print("7. Back")
 
-            c = Prompt.ask("\n[bold white]Select[/bold white]", choices=["1", "2", "3", "4", "5", "6"], default="6")
+            c = Prompt.ask("\n[bold white]Select[/bold white]", choices=["1", "2", "3", "4", "5", "6", "7"], default="7")
             if c == "1":
                 cfg["format"] = Prompt.ask("Format", choices=["mp3", "flac", "opus", "wav", "m4a"], default=cfg.get("format", "mp3"))
                 save_config(cfg)
@@ -131,16 +133,20 @@ class MobileTUI:
                 cfg["bitrate"] = Prompt.ask("Bitrate", choices=["320k", "256k", "192k", "128k"], default=cfg.get("bitrate", "320k"))
                 save_config(cfg)
             elif c == "3":
+                val = Prompt.ask("Concurrent Downloads (1-5)", choices=["1", "2", "3", "4", "5"], default=str(cfg.get("concurrent_downloads", 3)))
+                cfg["concurrent_downloads"] = int(val)
+                save_config(cfg)
+            elif c == "4":
                 new_dir = Prompt.ask("Path", default=str(cfg.get("output_dir", get_default_music_dir())))
                 p = Path(new_dir).expanduser()
                 p.mkdir(parents=True, exist_ok=True)
                 cfg["output_dir"] = str(p)
                 save_config(cfg)
-            elif c == "4":
+            elif c == "5":
                 cfg["fetch_lyrics"] = not cfg.get("fetch_lyrics", True)
                 save_config(cfg)
-            elif c == "5":
+            elif c == "6":
                 cfg["save_lrc"] = not cfg.get("save_lrc", False)
                 save_config(cfg)
-            elif c == "6":
+            elif c == "7":
                 break

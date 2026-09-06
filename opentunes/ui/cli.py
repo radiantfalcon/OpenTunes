@@ -1,5 +1,7 @@
 import argparse
+from concurrent.futures import ThreadPoolExecutor
 import sys
+import threading
 import time
 from pathlib import Path
 from typing import List, Optional
@@ -111,22 +113,47 @@ def execute_download(
     successful = 0
     failed = 0
 
+    concurrency = max(1, min(5, getattr(options, "concurrent_downloads", 3)))
+
     if options.mobile_mode or mobile:
-        for idx, track in enumerate(playlist.tracks, 1):
-            mobile_ui.print_track_start(idx, playlist.total_tracks, track.title, track.primary_artist)
-            try:
-                out_path = DownloadPipeline.process_track(
-                    track,
-                    options,
-                    folder_name=folder_name,
-                    total_tracks=playlist.total_tracks,
-                    index=idx,
-                )
-                mobile_ui.print_success(out_path.name)
-                successful += 1
-            except Exception as e:
-                mobile_ui.print_error(str(e))
-                failed += 1
+        if concurrency <= 1 or playlist.total_tracks <= 1:
+            for idx, track in enumerate(playlist.tracks, 1):
+                mobile_ui.print_track_start(idx, playlist.total_tracks, track.title, track.primary_artist)
+                try:
+                    out_path = DownloadPipeline.process_track(
+                        track,
+                        options,
+                        folder_name=folder_name,
+                        total_tracks=playlist.total_tracks,
+                        index=idx,
+                    )
+                    mobile_ui.print_success(out_path.name)
+                    successful += 1
+                except Exception as e:
+                    mobile_ui.print_error(str(e))
+                    failed += 1
+        else:
+            def mobile_worker(item):
+                idx, track = item
+                mobile_ui.print_track_start(idx, playlist.total_tracks, track.title, track.primary_artist)
+                try:
+                    out_path = DownloadPipeline.process_track(
+                        track,
+                        options,
+                        folder_name=folder_name,
+                        total_tracks=playlist.total_tracks,
+                        index=idx,
+                    )
+                    mobile_ui.print_success(out_path.name)
+                    return True
+                except Exception as e:
+                    mobile_ui.print_error(f"[{idx}/{playlist.total_tracks}] {track.title}: {e}")
+                    return False
+
+            with ThreadPoolExecutor(max_workers=concurrency) as executor:
+                results = list(executor.map(mobile_worker, enumerate(playlist.tracks, 1)))
+                successful = sum(1 for r in results if r)
+                failed = len(results) - successful
 
         mobile_ui.print_summary(successful, playlist.total_tracks, target_dir)
         return 0 if failed == 0 else 1
@@ -144,54 +171,98 @@ def execute_download(
             "Overall Playlist",
             total=playlist.total_tracks,
         )
-        current_task = progress.add_task(
-            "Current Track",
-            total=100,
-            visible=True,
-        )
 
-        for idx, track in enumerate(playlist.tracks, 1):
-            track_label = f"[{idx}/{playlist.total_tracks}] {track.primary_artist} - {track.title}"
-            if len(track_label) > 40:
-                track_label = track_label[:37] + "..."
-
-            progress.update(
-                current_task,
-                description=f"Matching: {track_label}",
-                completed=0,
+        if concurrency <= 1 or playlist.total_tracks <= 1:
+            current_task = progress.add_task(
+                "Current Track",
+                total=100,
+                visible=True,
             )
 
-            def progress_callback(p: DownloadProgress):
-                if p.status == TrackStatus.MATCHING:
-                    progress.update(current_task, description=f"Matching: {track_label}")
-                elif p.status == TrackStatus.DOWNLOADING:
-                    speed = f" | {p.speed_str}" if p.speed_str else ""
-                    progress.update(
-                        current_task,
-                        description=f"Downloading: {track_label}{speed}",
-                        completed=p.download_percent,
-                    )
-                elif p.status == TrackStatus.CONVERTING:
-                    progress.update(current_task, description=f"Converting: {track_label}", completed=100)
-                elif p.status == TrackStatus.TAGGING:
-                    progress.update(current_task, description=f"Tagging & Art: {track_label}", completed=100)
+            for idx, track in enumerate(playlist.tracks, 1):
+                track_label = f"[{idx}/{playlist.total_tracks}] {track.primary_artist} - {track.title}"
+                if len(track_label) > 40:
+                    track_label = track_label[:37] + "..."
 
-            try:
-                DownloadPipeline.process_track(
-                    track,
-                    options,
-                    folder_name=folder_name,
-                    total_tracks=playlist.total_tracks,
-                    index=idx,
-                    progress_callback=progress_callback,
+                progress.update(
+                    current_task,
+                    description=f"Matching: {track_label}",
+                    completed=0,
                 )
-                successful += 1
-            except Exception as e:
-                console.print(f"\n[bold white][ ERROR ] Failed to download {track.title}: {e}[/bold white]")
-                failed += 1
 
-            progress.update(current_task, completed=100)
-            progress.update(overall_task, advance=1)
+                def progress_callback(p: DownloadProgress):
+                    if p.status == TrackStatus.MATCHING:
+                        progress.update(current_task, description=f"Matching: {track_label}")
+                    elif p.status == TrackStatus.DOWNLOADING:
+                        speed = f" | {p.speed_str}" if p.speed_str else ""
+                        progress.update(
+                            current_task,
+                            description=f"Downloading: {track_label}{speed}",
+                            completed=p.download_percent,
+                        )
+                    elif p.status == TrackStatus.CONVERTING:
+                        progress.update(current_task, description=f"Converting: {track_label}", completed=100)
+                    elif p.status == TrackStatus.TAGGING:
+                        progress.update(current_task, description=f"Tagging & Art: {track_label}", completed=100)
+
+                try:
+                    DownloadPipeline.process_track(
+                        track,
+                        options,
+                        folder_name=folder_name,
+                        total_tracks=playlist.total_tracks,
+                        index=idx,
+                        progress_callback=progress_callback,
+                    )
+                    successful += 1
+                except Exception as e:
+                    console.print(f"\n[bold white][ ERROR ] Failed to download {track.title}: {e}[/bold white]")
+                    failed += 1
+
+                progress.update(current_task, completed=100)
+                progress.update(overall_task, advance=1)
+        else:
+            task_lock = threading.Lock()
+
+            def progress_worker(item):
+                idx, track = item
+                track_label = f"[{idx}/{playlist.total_tracks}] {track.primary_artist} - {track.title}"
+                if len(track_label) > 36:
+                    track_label = track_label[:33] + "..."
+
+                with task_lock:
+                    task_id = progress.add_task(f"Matching: {track_label}", total=100)
+
+                def track_cb(p: DownloadProgress):
+                    speed = f" | {p.speed_str}" if p.speed_str else ""
+                    desc = f"Downloading: {track_label}{speed}" if p.status == TrackStatus.DOWNLOADING else f"{p.status.value.capitalize()}: {track_label}"
+                    with task_lock:
+                        progress.update(task_id, description=desc, completed=p.download_percent)
+
+                ok = False
+                try:
+                    DownloadPipeline.process_track(
+                        track,
+                        options,
+                        folder_name=folder_name,
+                        total_tracks=playlist.total_tracks,
+                        index=idx,
+                        progress_callback=track_cb,
+                    )
+                    ok = True
+                except Exception as e:
+                    console.print(f"\n[bold white][ ERROR ] Failed to download {track.title}: {e}[/bold white]")
+                    ok = False
+                finally:
+                    with task_lock:
+                        progress.update(task_id, completed=100, visible=False)
+                        progress.update(overall_task, advance=1)
+                return ok
+
+            with ThreadPoolExecutor(max_workers=concurrency) as executor:
+                results = list(executor.map(progress_worker, enumerate(playlist.tracks, 1)))
+                successful = sum(1 for r in results if r)
+                failed = len(results) - successful
 
     if not is_batch:
         ui.display_completion_summary(successful, failed, playlist.total_tracks, target_dir)

@@ -78,6 +78,7 @@ class DownloadOptions:
     max_retries: int = 3
     rate_limit_delay: float = 1.2
     mobile_mode: bool = False
+    concurrent_downloads: int = 3
     quiet: bool = False
 
     def get_audio_quality_args(self) -> List[str]:

@@ -22,6 +22,7 @@ DEFAULT_CONFIG: Dict[str, Any] = {
     "max_retries": 3,
     "rate_limit_delay": 1.2,
     "mobile_mode": False,
+    "concurrent_downloads": 3,
     "spotify_client_id": "",
     "spotify_client_secret": "",
 }
@@ -57,6 +58,11 @@ def get_download_options(overrides: Dict[str, Any] | None = None) -> DownloadOpt
 
     out_dir = Path(cfg.get("output_dir", str(get_default_music_dir()))).expanduser()
 
+    try:
+        concurrent_val = max(1, min(5, int(cfg.get("concurrent_downloads", 3))))
+    except Exception:
+        concurrent_val = 3
+
     return DownloadOptions(
         format=cfg.get("format", "mp3"),
         bitrate=cfg.get("bitrate", "320k"),
@@ -70,4 +76,5 @@ def get_download_options(overrides: Dict[str, Any] | None = None) -> DownloadOpt
         max_retries=cfg.get("max_retries", 3),
         rate_limit_delay=float(cfg.get("rate_limit_delay", 1.2)),
         mobile_mode=cfg.get("mobile_mode", False),
+        concurrent_downloads=concurrent_val,
     )

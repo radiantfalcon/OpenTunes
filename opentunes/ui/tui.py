@@ -1,7 +1,9 @@
 import asyncio
+from concurrent.futures import ThreadPoolExecutor
 import os
 import shutil
 import sys
+import threading
 import time
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -411,6 +413,10 @@ class OpenTunesApp(App):
         self.fetch_lyrics = self.config.get("fetch_lyrics", True)
         self.save_lrc = self.config.get("save_lrc", False)
         self.overwrite = self.config.get("overwrite", False)
+        try:
+            self.concurrent_downloads = max(1, min(5, int(self.config.get("concurrent_downloads", 3))))
+        except Exception:
+            self.concurrent_downloads = 3
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)
@@ -478,6 +484,13 @@ class OpenTunesApp(App):
                             is_act = br == self.selected_bitrate
                             cls_name = "toggle-btn-active" if is_act else "toggle-btn"
                             yield Button(br, id=f"br-{br}", classes=cls_name)
+
+                    yield Label("CONCURRENT DOWNLOADS (1-5 SONGS)", classes="settings-subheader")
+                    with Horizontal(classes="toggle-row"):
+                        for c in [1, 2, 3, 4, 5]:
+                            is_act = c == self.concurrent_downloads
+                            cls_name = "toggle-btn-active" if is_act else "toggle-btn"
+                            yield Button(str(c), id=f"concurrent-{c}", classes=cls_name)
 
                     yield Label("OUTPUT DIRECTORY", classes="settings-subheader")
                     yield Input(
@@ -602,6 +615,18 @@ class OpenTunesApp(App):
             for b in ["320k", "256k", "192k", "128k"]:
                 btn = self.query_one(f"#br-{b}", Button)
                 if b == br:
+                    btn.remove_class("toggle-btn")
+                    btn.add_class("toggle-btn-active")
+                else:
+                    btn.remove_class("toggle-btn-active")
+                    btn.add_class("toggle-btn")
+
+        elif btn_id.startswith("concurrent-"):
+            c_val = int(btn_id.replace("concurrent-", ""))
+            self.concurrent_downloads = max(1, min(5, c_val))
+            for c in [1, 2, 3, 4, 5]:
+                btn = self.query_one(f"#concurrent-{c}", Button)
+                if c == self.concurrent_downloads:
                     btn.remove_class("toggle-btn")
                     btn.add_class("toggle-btn-active")
                 else:
@@ -763,6 +788,7 @@ class OpenTunesApp(App):
         self.config["fetch_lyrics"] = self.fetch_lyrics
         self.config["save_lrc"] = self.save_lrc
         self.config["overwrite"] = self.overwrite
+        self.config["concurrent_downloads"] = self.concurrent_downloads
 
         save_config(self.config)
         self.download_options = get_download_options()
@@ -809,11 +835,28 @@ class OpenTunesApp(App):
 
             self.app.call_from_thread(self._on_metadata_resolved, playlist_info)
 
-            success_count = 0
-            for idx, track in enumerate(playlist_info.tracks, 1):
-                def prog_callback(p: DownloadProgress):
-                    self.app.call_from_thread(self._update_progress_ui, p)
+            concurrency = max(1, min(5, getattr(opts, "concurrent_downloads", 3)))
 
+            success_count = 0
+            completed_count = 0
+            active_tracks: Dict[int, DownloadProgress] = {}
+            active_lock = threading.Lock()
+
+            def make_callback(track_idx: int):
+                def cb(p: DownloadProgress):
+                    with active_lock:
+                        active_tracks[track_idx] = p
+                        act_count = len(active_tracks)
+                        curr_done = completed_count
+                    self.app.call_from_thread(
+                        self._update_progress_ui, p, act_count, curr_done
+                    )
+                return cb
+
+            def download_one(item: tuple) -> bool:
+                nonlocal success_count, completed_count
+                idx, track = item
+                success = False
                 try:
                     DownloadPipeline.process_track(
                         track,
@@ -821,13 +864,31 @@ class OpenTunesApp(App):
                         folder_name=folder_name,
                         total_tracks=total_tracks,
                         index=idx,
-                        progress_callback=prog_callback,
+                        progress_callback=make_callback(idx),
                     )
-                    success_count += 1
+                    success = True
                 except Exception:
-                    pass
+                    success = False
+                finally:
+                    with active_lock:
+                        active_tracks.pop(idx, None)
+                        completed_count += 1
+                        if success:
+                            success_count += 1
+                        curr_done = completed_count
+                    self.app.call_from_thread(
+                        self._update_batch_progress, curr_done, total_tracks
+                    )
+                return success
 
-                self.app.call_from_thread(self._update_batch_progress, idx, total_tracks)
+            track_items = list(enumerate(playlist_info.tracks, 1))
+
+            if total_tracks <= 1 or concurrency <= 1:
+                for item in track_items:
+                    download_one(item)
+            else:
+                with ThreadPoolExecutor(max_workers=concurrency) as executor:
+                    list(executor.map(download_one, track_items))
 
             self.app.call_from_thread(self._on_download_complete, success_count, total_tracks, opts.output_dir)
 
@@ -842,21 +903,25 @@ class OpenTunesApp(App):
         title_lbl.update(f"FOUND {len(playlist.tracks)} TRACK(S)")
         info_lbl.update(f"{playlist.title} - {playlist.author}")
 
-    def _update_progress_ui(self, prog: DownloadProgress) -> None:
+    def _update_progress_ui(self, prog: DownloadProgress, active_count: int = 1, completed: int = 0) -> None:
         title_lbl = self.query_one("#monitor-title", Label)
         info_lbl = self.query_one("#track-info-label", Label)
         metrics_lbl = self.query_one("#metrics-label", Label)
         t_prog = self.query_one("#track-progress", ProgressBar)
 
         status_str = prog.status.value.upper()
-        if prog.current_track_idx > 0 and prog.total_tracks > 0:
+        if active_count > 1:
+            title_lbl.update(f"MULTI-DOWNLOAD [{completed}/{prog.total_tracks} DONE | {active_count} ACTIVE]")
+        elif prog.current_track_idx > 0 and prog.total_tracks > 0:
             title_lbl.update(f"TRACK [{prog.current_track_idx}/{prog.total_tracks}]")
+
         if prog.track_title:
-            info_lbl.update(f"{prog.track_title}")
+            info_lbl.update(f"[{prog.current_track_idx}/{prog.total_tracks}] {prog.track_title}")
 
         speed_part = f" | {prog.speed_str}" if prog.speed_str else ""
         eta_part = f" | ETA: {prog.eta_str}" if prog.eta_str else ""
-        metrics_lbl.update(f"Status: [ {status_str} ]{speed_part}{eta_part}")
+        thread_info = f" ({active_count} active)" if active_count > 1 else ""
+        metrics_lbl.update(f"Status: [ {status_str} ]{thread_info}{speed_part}{eta_part}")
 
         t_prog.update(progress=prog.download_percent)
 

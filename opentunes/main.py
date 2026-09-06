@@ -61,6 +61,16 @@ def parse_args():
         help="Destination directory for downloaded music",
     )
     parser.add_argument(
+        "-c",
+        "--concurrency",
+        "--multi",
+        dest="concurrent_downloads",
+        type=int,
+        choices=[1, 2, 3, 4, 5],
+        default=None,
+        help="Number of concurrent downloads (1-5)",
+    )
+    parser.add_argument(
         "--no-lyrics",
         dest="fetch_lyrics",
         action="store_false",
@@ -155,6 +165,7 @@ def main():
         "save_lrc": args.save_lrc,
         "overwrite": args.overwrite,
         "mobile_mode": args.mobile or is_narrow_screen(),
+        "concurrent_downloads": args.concurrent_downloads,
     }
     options = get_download_options(overrides)
 

@@ -1,16 +1,6 @@
-```text
-                                          ▄▄                                           
-                                          ▓▀ ▀                                         
-  ▄▄▓▀▓▄▄ ▐▒▀ ▄▀▓▄▄   ▄▄▓▀▓▄▄ ▐▒▀ ▄▀▓▄▄ ▄▄▒ ▓▄▄▐▓▀░   ░ ▄▐▒▀ ▄▀▓▄▄   ▄▄▓▀▓▄▄   ▄▄▓▀▓▄▄ 
- ▒▀    ▒▀ ▐░     ░   ▒▀    ░  ▐░     ░    ░    ▐░     ░  ▐░     ░   ▒▀    ░  ▐▒▀    ▀▀▀
-▐░ ▓   ░ ▓▐░▀░   ░▄ ▐░ ▓▀▀▀▀▀▀▐░▀░   ░▄  ░▒▄░  ▐▒▄▓   ▒▄▓▐░▀░   ░▄ ▐░ ▓▀▀▀▀▀▀ ▀▀▀▀▀▀░▒▄
- ▓░▄   ░▓█ ▒█▒   ▒█▓ ▓░▄   ░▓█ ▒█▒   ▒█▓  ▓█▒  ▐▓█▓   ▓▀▓ ▒█▒   ▒█▓ ▓░▄   ░▓█ ▓░▄   ░▓█
-  ▀▀▓▄▓▀▀  ▓▓▓ ▀▄▓▀▀  ▀▀▓▄▓▀▀  ▓▓▓   ▓▀▓  ▀▓▓▄  ▀██▀▄███▀ ▓▓▓   ▓▀▓  ▀▀▓▄▓▀▀   ▀▀▓▄▓▀▀ 
-           ▀▓█                                                                         
-             ▀                                                                         
-```
+<img width="828" height="294" alt="opentunes" src="https://github.com/user-attachments/assets/f26c9103-fe9e-43dd-b523-faf1c98c723f" />
 
-Open-Source Music downloader for Spotify, YouTube, and YouTube Music. Downloads songs, albums, and playlists with embedded cover art and lyrics.
+Open-Source Music downloader (yt-dlp reskin) for Spotify, YouTube, and YouTube Music. Downloads songs, albums, and playlists with embedded cover art and lyrics. Available for Linux, Windows, MacOS and Android (Termux and App)
 
 ---
 

@@ -1,3 +1,4 @@
+# Python
 .venv/
 __pycache__/
 *.pyc
@@ -5,3 +6,15 @@ Music/
 dist/
 build/
 *.egg-info/
+
+# Android build outputs and IDE files (source code is kept)
+.gradle/
+**/build/
+**/local.properties
+.idea/
+*.iml
+.DS_Store
+
+# Knowledge graph
+graphify-out/
+graphify/

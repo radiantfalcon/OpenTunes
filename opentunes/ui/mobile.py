@@ -99,13 +99,14 @@ class MobileTUI:
 
     def _print_header(self):
         cfg = load_config()
-        fmt = cfg.get("format", "mp3").upper()
+        fmt = cfg.get("format", "mp3")
         bitrate = cfg.get("bitrate", "320k")
         concurrent = cfg.get("concurrent_downloads", 3)
         out_dir = cfg.get("output_dir", str(get_default_music_dir()))
 
+        fmt_str = f"{fmt.upper()} {bitrate}" if fmt.lower() == "mp3" else fmt.upper()
         self.console.print("[bold white]OPENTUNES[/bold white]")
-        self.console.print(f"[dim]{fmt} {bitrate} | {concurrent} concurrent | {out_dir}[/dim]\n")
+        self.console.print(f"[dim]{fmt_str} | {concurrent} concurrent | {out_dir}[/dim]\n")
         self.console.print("[bold white]1.[/bold white] Download URL or Search")
         self.console.print("[bold white]2.[/bold white] Batch Download (.txt)")
         self.console.print("[bold white]3.[/bold white] Settings")
@@ -117,19 +118,23 @@ class MobileTUI:
         while True:
             self.console.clear()
             self.console.print("[bold white]SETTINGS[/bold white]\n")
-            self.console.print(f"1. Format: [bold white]{cfg.get('format', 'mp3').upper()}[/bold white]")
-            self.console.print(f"2. Bitrate: [bold white]{cfg.get('bitrate', '320k')}[/bold white]")
+            fmt = cfg.get("format", "mp3").lower()
+            is_mp3 = fmt == "mp3"
+            self.console.print(f"1. Format: [bold white]{fmt.upper()}[/bold white]")
+            if is_mp3:
+                self.console.print(f"2. Bitrate: [bold white]{cfg.get('bitrate', '320k')}[/bold white]")
             self.console.print(f"3. Concurrent Downloads: [bold white]{cfg.get('concurrent_downloads', 3)} songs[/bold white]")
             self.console.print(f"4. Output Directory: [bold white]{cfg.get('output_dir', str(get_default_music_dir()))}[/bold white]")
             self.console.print(f"5. Lyrics: [bold white]{'ON' if cfg.get('fetch_lyrics', True) else 'OFF'}[/bold white]")
             self.console.print(f"6. Synced .LRC: [bold white]{'ON' if cfg.get('save_lrc', False) else 'OFF'}[/bold white]")
             self.console.print("7. Back")
 
-            c = Prompt.ask("\n[bold white]Select[/bold white]", choices=["1", "2", "3", "4", "5", "6", "7"], default="7")
+            choices = ["1", "2", "3", "4", "5", "6", "7"] if is_mp3 else ["1", "3", "4", "5", "6", "7"]
+            c = Prompt.ask("\n[bold white]Select[/bold white]", choices=choices, default="7")
             if c == "1":
                 cfg["format"] = Prompt.ask("Format", choices=["mp3", "flac", "opus", "wav", "m4a"], default=cfg.get("format", "mp3"))
                 save_config(cfg)
-            elif c == "2":
+            elif c == "2" and is_mp3:
                 cfg["bitrate"] = Prompt.ask("Bitrate", choices=["320k", "256k", "192k", "128k"], default=cfg.get("bitrate", "320k"))
                 save_config(cfg)
             elif c == "3":

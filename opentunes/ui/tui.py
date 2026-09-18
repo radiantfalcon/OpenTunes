@@ -369,6 +369,11 @@ class OpenTunesApp(App):
         margin-top: 0;
     }
 
+    #section-bitrate {
+        height: auto;
+        width: 100%;
+    }
+
     .hidden {
         display: none;
     }
@@ -478,12 +483,14 @@ class OpenTunesApp(App):
                             cls_name = "toggle-btn-active" if is_act else "toggle-btn"
                             yield Button(fmt.upper(), id=f"fmt-{fmt}", classes=cls_name)
 
-                    yield Label("BITRATE", classes="settings-subheader")
-                    with Horizontal(classes="toggle-row"):
-                        for br in ["320k", "256k", "192k", "128k"]:
-                            is_act = br == self.selected_bitrate
-                            cls_name = "toggle-btn-active" if is_act else "toggle-btn"
-                            yield Button(br, id=f"br-{br}", classes=cls_name)
+                    bitrate_cls = "" if self.selected_format == "mp3" else "hidden"
+                    with Vertical(id="section-bitrate", classes=bitrate_cls):
+                        yield Label("BITRATE", classes="settings-subheader")
+                        with Horizontal(classes="toggle-row"):
+                            for br in ["320k", "256k", "192k", "128k"]:
+                                is_act = br == self.selected_bitrate
+                                cls_name = "toggle-btn-active" if is_act else "toggle-btn"
+                                yield Button(br, id=f"br-{br}", classes=cls_name)
 
                     yield Label("CONCURRENT DOWNLOADS (1-5 SONGS)", classes="settings-subheader")
                     with Horizontal(classes="toggle-row"):
@@ -608,6 +615,12 @@ class OpenTunesApp(App):
                 else:
                     btn.remove_class("toggle-btn-active")
                     btn.add_class("toggle-btn")
+
+            bitrate_section = self.query_one("#section-bitrate", Vertical)
+            if fmt == "mp3":
+                bitrate_section.remove_class("hidden")
+            else:
+                bitrate_section.add_class("hidden")
 
         elif btn_id.startswith("br-"):
             br = btn_id.replace("br-", "")

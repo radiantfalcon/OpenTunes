@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "opentunes"
-version = "1.0.0"
-description = "Lightweight, cross-platform music downloader for YouTube Music & Spotify with sequential tagging & interactive TUI"
+version = "1.0.1"
+description = "Lightweight, cross-platform music downloader and offline music player for YouTube Music & Spotify."
 readme = "README.md"
 requires-python = ">=3.8"
 license = { text = "MIT" }
